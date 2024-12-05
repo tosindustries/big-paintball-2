@@ -347,15 +347,24 @@ local function getClosestPlayer()
 end
 
 local function aimAt(position)
+    if not position then return end
+    
     local targetPos = position
     local cameraPos = Services.Camera.CFrame.Position
     local newCFrame = CFrame.new(cameraPos, targetPos)
     
     if AimAssist.Mode == "Realistic" then
-        -- Smooth transition
+        -- Smooth camera movement
         local currentCFrame = Services.Camera.CFrame
         local smoothness = AimAssist.Smoothness
-        Services.Camera.CFrame = currentCFrame:Lerp(newCFrame, smoothness)
+        
+        -- Calculate angle difference
+        local targetAngle = (targetPos - cameraPos).Unit
+        local currentAngle = currentCFrame.LookVector
+        
+        -- Lerp the camera angle
+        local resultAngle = currentAngle:Lerp(targetAngle, smoothness)
+        Services.Camera.CFrame = CFrame.new(cameraPos, cameraPos + resultAngle)
     else
         -- Instant snap
         Services.Camera.CFrame = newCFrame
@@ -364,12 +373,20 @@ end
 
 -- Main Update Loop
 local function updateAimbot()
-    if not AimAssist.Enabled then return end
+    if not AimAssist.Enabled then 
+        FOVCircle.Visible = false
+        return 
+    end
 
-    -- Update FOV Circle
+    -- Only show FOV circle when aiming
+    FOVCircle.Visible = Services.UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
     FOVCircle.Position = Services.UserInputService:GetMouseLocation()
     FOVCircle.Radius = AimAssist.FOV
-    FOVCircle.Visible = true
+
+    -- Only aim when right mouse button is held
+    if not Services.UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
+        return
+    end
 
     local target = getClosestPlayer()
     if not target then return end
