@@ -75,7 +75,11 @@ getgenv().ESP = {
     NameSize = 13,
     HealthEnabled = true,
     MaxDistance = 1000,
-    Objects = {}
+    Objects = {},
+    SkeletonEnabled = true,
+    SkeletonColor = Color3.fromRGB(255, 255, 255),
+    SkeletonThickness = 1,
+    SkeletonTransparency = 0.9,
 }
 
 -- ESP Implementation
@@ -101,7 +105,45 @@ local function createESPObject(player)
             Filled = true,
             Transparency = 1,
             Visible = false
-        })
+        }),
+        Skeleton = {
+            UpperTorsoToHead = createDrawing("Line", {
+                Thickness = ESP.SkeletonThickness,
+                Transparency = ESP.SkeletonTransparency,
+                Color = ESP.SkeletonColor,
+                Visible = false
+            }),
+            UpperTorsoToLeftArm = createDrawing("Line", {
+                Thickness = ESP.SkeletonThickness,
+                Transparency = ESP.SkeletonTransparency,
+                Color = ESP.SkeletonColor,
+                Visible = false
+            }),
+            UpperTorsoToRightArm = createDrawing("Line", {
+                Thickness = ESP.SkeletonThickness,
+                Transparency = ESP.SkeletonTransparency,
+                Color = ESP.SkeletonColor,
+                Visible = false
+            }),
+            UpperTorsoToLowerTorso = createDrawing("Line", {
+                Thickness = ESP.SkeletonThickness,
+                Transparency = ESP.SkeletonTransparency,
+                Color = ESP.SkeletonColor,
+                Visible = false
+            }),
+            LowerTorsoToLeftLeg = createDrawing("Line", {
+                Thickness = ESP.SkeletonThickness,
+                Transparency = ESP.SkeletonTransparency,
+                Color = ESP.SkeletonColor,
+                Visible = false
+            }),
+            LowerTorsoToRightLeg = createDrawing("Line", {
+                Thickness = ESP.SkeletonThickness,
+                Transparency = ESP.SkeletonTransparency,
+                Color = ESP.SkeletonColor,
+                Visible = false
+            })
+        }
     }
     ESP.Objects[player] = espObject
     return espObject
@@ -189,6 +231,69 @@ local function updateESPObject(espObject)
         espObject.HealthBar.Color = Color3.fromHSV(healthPercent * 0.3, 1, 1)
         espObject.HealthBar.Visible = true
     end
+
+    -- Update Skeleton
+    if ESP.SkeletonEnabled then
+        local character = espObject.Player.Character
+        if character then
+            local head = character:FindFirstChild("Head")
+            local upperTorso = character:FindFirstChild("UpperTorso")
+            local lowerTorso = character:FindFirstChild("LowerTorso")
+            local leftArm = character:FindFirstChild("LeftUpperArm")
+            local rightArm = character:FindFirstChild("RightUpperArm")
+            local leftLeg = character:FindFirstChild("LeftUpperLeg")
+            local rightLeg = character:FindFirstChild("RightUpperLeg")
+
+            if head and upperTorso and lowerTorso then
+                -- Head to UpperTorso
+                local headPos = Services.Camera:WorldToViewportPoint(head.Position)
+                local upperTorsoPos = Services.Camera:WorldToViewportPoint(upperTorso.Position)
+                espObject.Skeleton.UpperTorsoToHead.From = Vector2.new(upperTorsoPos.X, upperTorsoPos.Y)
+                espObject.Skeleton.UpperTorsoToHead.To = Vector2.new(headPos.X, headPos.Y)
+                espObject.Skeleton.UpperTorsoToHead.Visible = true
+
+                -- Arms
+                if leftArm then
+                    local leftArmPos = Services.Camera:WorldToViewportPoint(leftArm.Position)
+                    espObject.Skeleton.UpperTorsoToLeftArm.From = Vector2.new(upperTorsoPos.X, upperTorsoPos.Y)
+                    espObject.Skeleton.UpperTorsoToLeftArm.To = Vector2.new(leftArmPos.X, leftArmPos.Y)
+                    espObject.Skeleton.UpperTorsoToLeftArm.Visible = true
+                end
+
+                if rightArm then
+                    local rightArmPos = Services.Camera:WorldToViewportPoint(rightArm.Position)
+                    espObject.Skeleton.UpperTorsoToRightArm.From = Vector2.new(upperTorsoPos.X, upperTorsoPos.Y)
+                    espObject.Skeleton.UpperTorsoToRightArm.To = Vector2.new(rightArmPos.X, rightArmPos.Y)
+                    espObject.Skeleton.UpperTorsoToRightArm.Visible = true
+                end
+
+                -- Torso connection
+                local lowerTorsoPos = Services.Camera:WorldToViewportPoint(lowerTorso.Position)
+                espObject.Skeleton.UpperTorsoToLowerTorso.From = Vector2.new(upperTorsoPos.X, upperTorsoPos.Y)
+                espObject.Skeleton.UpperTorsoToLowerTorso.To = Vector2.new(lowerTorsoPos.X, lowerTorsoPos.Y)
+                espObject.Skeleton.UpperTorsoToLowerTorso.Visible = true
+
+                -- Legs
+                if leftLeg then
+                    local leftLegPos = Services.Camera:WorldToViewportPoint(leftLeg.Position)
+                    espObject.Skeleton.LowerTorsoToLeftLeg.From = Vector2.new(lowerTorsoPos.X, lowerTorsoPos.Y)
+                    espObject.Skeleton.LowerTorsoToLeftLeg.To = Vector2.new(leftLegPos.X, leftLegPos.Y)
+                    espObject.Skeleton.LowerTorsoToLeftLeg.Visible = true
+                end
+
+                if rightLeg then
+                    local rightLegPos = Services.Camera:WorldToViewportPoint(rightLeg.Position)
+                    espObject.Skeleton.LowerTorsoToRightLeg.From = Vector2.new(lowerTorsoPos.X, lowerTorsoPos.Y)
+                    espObject.Skeleton.LowerTorsoToRightLeg.To = Vector2.new(rightLegPos.X, rightLegPos.Y)
+                    espObject.Skeleton.LowerTorsoToRightLeg.Visible = true
+                end
+            end
+        end
+    else
+        for _, line in pairs(espObject.Skeleton) do
+            line.Visible = false
+        end
+    end
 end
 
 -- Aimbot Implementation
@@ -242,31 +347,19 @@ local function getClosestPlayer()
 end
 
 local function aimAt(position)
-    local mousePos = Services.UserInputService:GetMouseLocation()
-    local targetPos = Services.Camera:WorldToViewportPoint(position)
-    local targetVector = Vector2.new(targetPos.X, targetPos.Y)
-
-    -- Apply humanization
-    if AimAssist.Humanization.Enabled then
-        local humanOffset = Vector2.new(
-            math.random(-10, 10) * AimAssist.Humanization.Amount,
-            math.random(-10, 10) * AimAssist.Humanization.Amount
-        )
-        targetVector = targetVector + humanOffset
-    end
-
-    -- Apply smoothing
+    local targetPos = position
+    local cameraPos = Services.Camera.CFrame.Position
+    local newCFrame = CFrame.new(cameraPos, targetPos)
+    
     if AimAssist.Mode == "Realistic" then
-        local delta = (targetVector - mousePos) * AimAssist.Smoothness
-        targetVector = mousePos + delta
+        -- Smooth transition
+        local currentCFrame = Services.Camera.CFrame
+        local smoothness = AimAssist.Smoothness
+        Services.Camera.CFrame = currentCFrame:Lerp(newCFrame, smoothness)
+    else
+        -- Instant snap
+        Services.Camera.CFrame = newCFrame
     end
-
-    -- Move mouse
-    Services.VirtualInputManager:SendMouseMoveEvent(
-        targetVector.X,
-        targetVector.Y,
-        game:GetService("Workspace")
-    )
 end
 
 -- Main Update Loop
@@ -320,8 +413,21 @@ end)
 
 -- Main Loop
 Services.RunService.RenderStepped:Connect(function()
-    updateAimbot()
-    updateESP()
+    if ESP.Enabled then
+        for _, player in pairs(Services.Players:GetPlayers()) do
+            if player ~= Services.LocalPlayer then
+                local espObject = ESP.Objects[player]
+                if not espObject then
+                    espObject = createESPObject(player)
+                end
+                updateESPObject(espObject)
+            end
+        end
+    end
+    
+    if AimAssist.Enabled then
+        updateAimbot()
+    end
 end)
 
 -- Create Window
@@ -429,6 +535,14 @@ ESPGroup:AddToggle('HealthESP', {
     Default = true,
     Callback = function(Value)
         getgenv().ESP.HealthEnabled = Value
+    end
+})
+
+ESPGroup:AddToggle('SkeletonESP', {
+    Text = 'Skeleton',
+    Default = true,
+    Callback = function(Value)
+        getgenv().ESP.SkeletonEnabled = Value
     end
 })
 
