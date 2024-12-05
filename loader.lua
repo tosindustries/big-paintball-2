@@ -11,14 +11,110 @@ local Services = {
 Services.LocalPlayer = Services.Players.LocalPlayer
 Services.Camera = Workspace.CurrentCamera
 
--- Load UI Library
+-- Utility Functions
+local Utils = {}
+
+function Utils.isVisible(character, origin)
+    if not character then return false end
+    
+    local head = character:FindFirstChild("Head")
+    if not head then return false end
+    
+    local ray = Ray.new(origin, (head.Position - origin).Unit * 1000)
+    local part = workspace:FindPartOnRayWithIgnoreList(ray, {game.Players.LocalPlayer.Character})
+    
+    return part and part:IsDescendantOf(character)
+end
+
+function Utils.predictPosition(position, velocity)
+    if not position or not velocity then return position end
+    local bulletSpeed = 1000 -- Adjust based on Big Paintball 2's bullet speed
+    local timeToHit = (position - workspace.CurrentCamera.CFrame.Position).Magnitude / bulletSpeed
+    return position + (velocity * timeToHit)
+end
+
+-- Aimbot Module
+local Aimbot = {
+    settings = {
+        enabled = false,
+        teamCheck = true,
+        visibilityCheck = true,
+        targetMode = "Distance",
+        targetPart = "Head",
+        silent = false,
+        autoShoot = false,
+        triggerbot = false,
+        triggerbotDelay = 0.1,
+        
+        -- Realism Settings
+        smoothing = true,
+        smoothingAmount = 2,
+        humanization = true,
+        humanizationAmount = 0.2,
+        randomization = true,
+        randomizationAmount = 0.1,
+        
+        -- Accuracy Settings
+        accuracy = 100,
+        recoilControl = 100,
+        
+        -- Prediction Settings
+        prediction = true,
+        predictionAmount = 0.165,
+        
+        -- FOV Settings
+        fov = 120,
+        showFOV = true,
+        dynamicFOV = true,
+        
+        -- Advanced Settings
+        maxDistance = 1000,
+        wallCheck = true,
+        jumpCheck = true,
+        rcsEnabled = true,
+        rcsAmount = 1.0
+    },
+    
+    state = {
+        shooting = false,
+        lastShot = 0,
+        currentRecoil = Vector2.new(),
+        missChance = 0,
+        lastTarget = nil,
+        targetSwitchDelay = 0.3,
+        lastTargetSwitch = 0
+    }
+}
+
+-- [Copy all Aimbot methods from aimbot.lua here]
+
+-- ESP Module
+local ESP = {
+    settings = {
+        Enabled = false,
+        TeamCheck = true,
+        TeamColor = true,
+        Boxes = false,
+        Names = false,
+        Health = false,
+        Distance = false,
+        Tracers = false,
+        MaxDistance = 1000,
+        TextSize = 13,
+        BoxThickness = 2,
+        BoxTransparency = 1,
+        TextTransparency = 1,
+        TracerTransparency = 1,
+        TeamMates = false
+    },
+    objects = {}
+}
+
+-- [Copy all ESP methods from esp.lua here]
+
+-- Load UI Library (using direct loadstring)
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/addons/ThemeManager.lua"))()
-
--- Load Modules
-local Aimbot = loadstring(game:HttpGet('https://raw.githubusercontent.com/tosindustries/pf/main/big_paintball_2/modules/aimbot.lua'))()
-local ESP = loadstring(game:HttpGet('https://raw.githubusercontent.com/tosindustries/pf/main/big_paintball_2/modules/esp.lua'))()
-local Utils = loadstring(game:HttpGet('https://raw.githubusercontent.com/tosindustries/pf/main/big_paintball_2/modules/utils.lua'))()
 
 -- Create Window
 local Window = Library:CreateWindow({
@@ -199,5 +295,23 @@ local function Init()
     
     Library:Notify('Successfully loaded!', 5)
 end
+
+-- Simple loadstring for users
+local loadstring_code = [[
+    local success, result = pcall(function()
+        if game.PlaceId ~= 3606833500 then
+            return error("❌ This script is only for Big Paintball 2!")
+        end
+        -- Rest of the script here
+        return Init()
+    end)
+    
+    if not success then
+        warn("❌ Error loading script:", result)
+        return false
+    end
+    
+    return result
+]]
 
 return Init() 
